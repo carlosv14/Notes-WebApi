@@ -23,17 +23,45 @@
             this.noteRepository = noteRepository;
         }
 
-        public IEnumerable<NoteDetailBindingModel> Get()
+        public IEnumerable<NoteListItemBindingModel> Get()
         {
             return this.noteRepository.Transform(x =>
-            new NoteDetailBindingModel
+            new NoteListItemBindingModel
             {
+                Id = x.Id,
                 Title = x.Title,
                 Body = x.Content.Substring(0, 5),
                 Username = x.User.UserName
             });
         }
 
+        [Authorize]
+        [Route("api/me/Notes")]
+        public IEnumerable<NoteListItemBindingModel> GetCurrentUserNotes()
+        {
+            var currentUserId = Thread.CurrentPrincipal.Identity.GetUserId();
+            return this.noteRepository.All()
+                .Where(x => x.UserId == currentUserId)
+                .Select(x => new NoteListItemBindingModel
+                {
+                    Id = x.Id,
+                    Body = x.Content.Substring(0, 5),
+                    Title = x.Title,
+                    Username = x.User.UserName
+                });
+        }
+
+        public async Task<NoteDetailBindingModel> Get(long id)
+        {
+            var note = await this.noteRepository.FirstOrDefaultAsync(x => x.Id == id);
+            return new NoteDetailBindingModel
+            {
+                Body = note.Content,
+                Title = note.Title
+            };
+        }
+
+        [Authorize]
         [HttpPost]
         public async Task<IHttpActionResult> Post(NoteCreateBindingModel model)
         {
